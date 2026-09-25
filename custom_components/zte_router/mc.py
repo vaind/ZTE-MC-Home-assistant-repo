@@ -261,10 +261,8 @@ class zteRouter:
         for protocol in protocols:
             url = f"{protocol}://{self.ip}/index.html"
             try:
-                # A failed probe has already answered the question, and a router is
-                # rebuilt on every poll. Retrying only buys urllib3 WARNING lines,
-                # logged under its own name, which this integration's log level
-                # cannot mute.
+                # No retries: a failed probe is an answer, and each urllib3 retry
+                # logs a WARNING this integration's log level cannot mute.
                 response = s.request('GET', url, timeout=2, retries=False)
                 if response.status in [200, 302, 301]:
                     self.protocol = protocol
@@ -274,7 +272,7 @@ class zteRouter:
                     return
             except Exception as e:
                 logger.debug(f"Failed to connect using {protocol}: {e}, trying next protocol.")
-            self.unreachable_protocols.add(protocol)
+                self.unreachable_protocols.add(protocol)
 
         # Instead of raising, handle router unavailability gracefully:
         logger.warning("Router is unavailable, protocol not set.")
@@ -988,8 +986,9 @@ class zteRouter:
                 return pem_text
 
             AD = getattr(self, "_zte_auth_AD", None)
-            # Skip a scheme the probe already found unreachable: on an http-only
-            # modem the https entry costs a urllib3 retry burst every SMS poll.
+            # Keeps the original http-first fallback order (the probe tries https
+            # first). Skips a scheme the probe could not reach: retrying it floods
+            # the log with urllib3 warnings.
             base_urls = [self.referer] + [
                 f"{p}://{self.ip}/" for p in ("http", "https")
                 if p not in self.unreachable_protocols

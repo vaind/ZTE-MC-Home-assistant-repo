@@ -125,7 +125,9 @@ class ProtocolProbeTest(unittest.TestCase):
             self.assertIs(value.value, False)
 
     def test_red_crypto_does_not_hardcode_a_scheme(self):
-        """It must follow what the probe found, not re-probe https on an http-only modem."""
+        """It must follow what the probe found, not re-probe https on an http-only modem.
+
+        Checked by text: any string literal starting with https:// fails it."""
         literals = [
             node.value
             for node in ast.walk(function_def("mc.py", "_setup_red_crypto"))
